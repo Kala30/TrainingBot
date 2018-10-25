@@ -5,6 +5,9 @@ import net.dv8tion.jda.core.entities.*;
 import net.dv8tion.jda.core.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.core.exceptions.HierarchyException;
 import net.dv8tion.jda.core.hooks.ListenerAdapter;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.util.List;
@@ -38,22 +41,24 @@ public class ReadyListener extends ListenerAdapter {
                     channel.sendMessage("Pong!").queue();
                     break;
                 case "help":
-                    channel.sendMessage("```**Stats:** !stats <battletag>\n**Set role:** !setprofile <battletag>```").queue();
+                    channel.sendMessage("**Stats:** `!stats <battletag> <default:pc | psn | xbl>`\nSet role: `!setprofile <battletag> <default: pc | psn | xbl>`").queue();
                     break;
                 case "stats":
                     if (args.length > 1) {
                         try {
                             channel.sendTyping().queue();
-                            channel.sendMessage(getProfile(args[1])).queue();
+                            channel.sendMessage(getProfileScrape(args[1])).queue();
                         } catch (Exception e) {
+                            e.printStackTrace();
                             channel.sendMessage(args[1] + " was not found").queue();
                         }
                     } else {
                         String nickname = event.getGuild().getMember(event.getAuthor()).getNickname();
                         try {
                             channel.sendTyping().queue();
-                            channel.sendMessage(getProfile(nickname)).queue();
+                            channel.sendMessage(getProfileScrape(nickname)).queue();
                         } catch (Exception e) {
+                            e.printStackTrace();
                             if (nickname != null)
                                 channel.sendMessage(nickname + " was not found").queue();
                             else
@@ -102,7 +107,7 @@ public class ReadyListener extends ListenerAdapter {
             JsonObject stats = jsonParser.parse(new InputStreamReader(responseBody, "UTF-8")).getAsJsonObject();
 
             EmbedBuilder eb = new EmbedBuilder();
-            eb.setTitle(battletag, "https://playoverwatch.com/en-us/career/pc/" + battletag.replace('#', '-'));
+            eb.setTitle(battletag, "https://www.overbuff.com/players/pc/" + battletag.replace('#', '-'));
             eb.setColor(new Color(0x2196F3));
             eb.setImage(stats.get("icon").getAsString());
             if (!stats.get("ratingIcon").getAsString().equals(""))
@@ -123,6 +128,64 @@ public class ReadyListener extends ListenerAdapter {
             eb.setDescription("ERROR");
             return eb.build();
         }
+    }
+
+    public static MessageEmbed getProfileScrape(String battletag) throws IOException {
+        String url = "https://playoverwatch.com/career/pc/" + battletag.replace('#', '-');
+        Document document = Jsoup.connect(url).get();
+        Element player = document.selectFirst(".masthead-player");
+
+        EmbedBuilder eb = new EmbedBuilder();
+        eb.setTitle(battletag, "https://www.overbuff.com/players/pc/" + battletag.replace('#', '-'));
+        eb.setColor(new Color(0x2196F3));
+
+        eb.setImage(player.selectFirst("img").attr("src"));
+
+        String desc = "Level " + player.selectFirst(".player-level").text();
+        desc += "\nEndorsement Lvl " + player.selectFirst(".endorsement-level").text();
+        eb.setDescription(desc);
+
+        String qp = "";
+        try {
+            String time = document.selectFirst("tr[data-stat-id=\"0x0860000000000026\"]").text().split(" ")[2];
+            qp += "\nTime Played: " + time;
+
+            String gamesWon = document.selectFirst("tr[data-stat-id=\"0x08600000000003F5\"]").text().split(" ")[2];
+            qp += "\nGames Won: " + gamesWon;
+
+            Element mostPlayed = document.selectFirst(".bar-container");
+            qp += "\nMost Played: " + mostPlayed.selectFirst(".title").text() + " " + mostPlayed.selectFirst(".description").text();
+
+        } catch (NullPointerException e) {}
+
+        eb.addField("Quick Play", qp, true);
+
+        try {
+            eb.setThumbnail(player.selectFirst(".competitive-rank").selectFirst("img").attr("src"));
+            String comp = player.selectFirst(".competitive-rank").text() + " SR";
+
+            Element compDiv = document.selectFirst("#competitive");
+
+            String time = compDiv.selectFirst("tr[data-stat-id=\"0x0860000000000026\"]").text().split(" ")[2];
+            comp += "\nTime Played: " + time;
+
+            String gamesWon = compDiv.selectFirst("div[data-group-id=\"stats\"]").selectFirst("tr[data-stat-id=\"0x08600000000003F5\"]").text().split(" ")[2];
+            String gamesLost = compDiv.selectFirst("div[data-group-id=\"stats\"]").selectFirst("tr[data-stat-id=\"0x086000000000042E\"]").text().split(" ")[2];
+            double won = Double.parseDouble(gamesWon);
+            double lost = Double.parseDouble(gamesLost);
+            String winRate = Double.toString(round(won / (won + lost)*100, 2)) + "%";
+            comp += "\nGames Won: " + gamesWon;
+            comp += "\nWin Rate: " + winRate;
+
+            Element mostPlayed = compDiv.selectFirst(".bar-container");
+            comp += "\nMost Played: " + mostPlayed.selectFirst(".title").text() + " " + mostPlayed.selectFirst(".description").text();
+
+            eb.addField("Competitive", comp, true);
+        } catch (NullPointerException e) {}
+
+
+
+        return eb.build();
     }
 
     public static String setProfile(String battletag, MessageReceivedEvent event) throws IOException {
@@ -174,6 +237,19 @@ public class ReadyListener extends ListenerAdapter {
             con.disconnect();
             return "Error";
         }
+    }
+
+    static String upperFirst(String input) {
+        return input.substring(0, 1).toUpperCase() + input.substring(1);
+    }
+
+    static double round(double value, int places) {
+        if (places < 0) throw new IllegalArgumentException();
+
+        long factor = (long) Math.pow(10, places);
+        value = value * factor;
+        long tmp = Math.round(value);
+        return (double) tmp / factor;
     }
 
 }
