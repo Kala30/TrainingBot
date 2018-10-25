@@ -6,4 +6,5 @@ Discord bot for viewing Overwatch stats and assigning roles/nicknames from a Bat
 ### Commands
 
 `!stats <battletag or use nickname>`
+
 `!setprofile <battletag or use nickname>`
