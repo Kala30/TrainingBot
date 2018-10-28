@@ -148,13 +148,13 @@ public class ReadyListener extends ListenerAdapter {
         String qp = "";
         try {
             String time = document.selectFirst("tr[data-stat-id=\"0x0860000000000026\"]").text().split(" ")[2];
-            qp += "\nTime Played: " + time;
+            qp += "\nTime Played: **" + time + "**";
 
             String gamesWon = document.selectFirst("tr[data-stat-id=\"0x08600000000003F5\"]").text().split(" ")[2];
-            qp += "\nGames Won: " + gamesWon;
+            qp += "\nGames Won: **" + gamesWon + "**";
 
             Element mostPlayed = document.selectFirst(".bar-container");
-            qp += "\nMost Played: " + mostPlayed.selectFirst(".title").text() + " " + mostPlayed.selectFirst(".description").text();
+            qp += "\nMost Played: **" + mostPlayed.selectFirst(".title").text() + " " + mostPlayed.selectFirst(".description").text().replace("ou", "").replace("inute", "in") + "**";
 
         } catch (NullPointerException e) {}
 
@@ -162,23 +162,23 @@ public class ReadyListener extends ListenerAdapter {
 
         try {
             eb.setThumbnail(player.selectFirst(".competitive-rank").selectFirst("img").attr("src"));
-            String comp = player.selectFirst(".competitive-rank").text() + " SR";
+            String comp = "**" + player.selectFirst(".competitive-rank").text() + " SR**";
 
             Element compDiv = document.selectFirst("#competitive");
 
             String time = compDiv.selectFirst("tr[data-stat-id=\"0x0860000000000026\"]").text().split(" ")[2];
-            comp += "\nTime Played: " + time;
+            comp += "\nTime Played: **" + time + "**";
 
             String gamesWon = compDiv.selectFirst("div[data-group-id=\"stats\"]").selectFirst("tr[data-stat-id=\"0x08600000000003F5\"]").text().split(" ")[2];
             String gamesLost = compDiv.selectFirst("div[data-group-id=\"stats\"]").selectFirst("tr[data-stat-id=\"0x086000000000042E\"]").text().split(" ")[2];
             double won = Double.parseDouble(gamesWon);
             double lost = Double.parseDouble(gamesLost);
             String winRate = Double.toString(round(won / (won + lost)*100, 2)) + "%";
-            comp += "\nGames Won: " + gamesWon;
-            comp += "\nWin Rate: " + winRate;
+            comp += "\nGames Won: **" + gamesWon + "**";
+            comp += "\nWin Rate: **" + winRate + "**";
 
             Element mostPlayed = compDiv.selectFirst(".bar-container");
-            comp += "\nMost Played: " + mostPlayed.selectFirst(".title").text() + " " + mostPlayed.selectFirst(".description").text();
+            comp += "\nMost Played: **" + mostPlayed.selectFirst(".title").text() + " " + mostPlayed.selectFirst(".description").text().replace("ou", "").replace("inute", "in") + "**";
 
             eb.addField("Competitive", comp, true);
         } catch (NullPointerException e) {}
