@@ -41,7 +41,7 @@ public class ReadyListener extends ListenerAdapter {
                     channel.sendMessage("Pong!").queue();
                     break;
                 case "help":
-                    channel.sendMessage("**Stats:** `!stats <battletag> <default:pc | psn | xbl>`\nSet role: `!setprofile <battletag> <default: pc | psn | xbl>`").queue();
+                    channel.sendMessage(helpEmbed()).queue();
                     break;
                 case "stats":
                     if (args.length > 1) {
@@ -50,7 +50,7 @@ public class ReadyListener extends ListenerAdapter {
                             channel.sendMessage(getProfileScrape(args[1])).queue();
                         } catch (Exception e) {
                             e.printStackTrace();
-                            channel.sendMessage(args[1] + " was not found").queue();
+                            channel.sendMessage(errorEmbed(args[1] + " was not found")).queue();
                         }
                     } else {
                         String nickname = event.getGuild().getMember(event.getAuthor()).getNickname();
@@ -60,9 +60,9 @@ public class ReadyListener extends ListenerAdapter {
                         } catch (Exception e) {
                             e.printStackTrace();
                             if (nickname != null)
-                                channel.sendMessage(nickname + " was not found").queue();
+                                channel.sendMessage(errorEmbed(nickname + " was not found")).queue();
                             else
-                                channel.sendMessage(event.getAuthor().getAsMention() + " Please set your nickname to your Battletag").queue();
+                                channel.sendMessage(errorEmbed("Please set your nickname to your Battletag")).queue();
                         }
                     }
                     break;
@@ -75,10 +75,10 @@ public class ReadyListener extends ListenerAdapter {
                                 channel.sendMessage(setProfile(nickname, event)).queue();
                             } catch (Exception e) {
                                 e.printStackTrace();
-                                channel.sendMessage("Player not found.").queue();
+                                channel.sendMessage(errorEmbed("Player not found")).queue();
                             }
                         } else {
-                            channel.sendMessage(event.getAuthor().getAsMention() + " Please set your nickname to your Battletag").queue();
+                            channel.sendMessage(errorEmbed("Please set your nickname to your Battletag")).queue();
                         }
                     } else {
                         try {
@@ -86,7 +86,7 @@ public class ReadyListener extends ListenerAdapter {
                             channel.sendMessage(setProfile(args[1], event)).queue();
                         } catch (Exception e) {
                             e.printStackTrace();
-                            channel.sendMessage("Player not found.").queue();
+                            channel.sendMessage(errorEmbed("Player not found")).queue();
                         }
                         break;
                     }
@@ -228,7 +228,7 @@ public class ReadyListener extends ListenerAdapter {
                 try {
                     guild.getController().setNickname(guild.getMember(event.getAuthor()), battletag).queue();
                 } catch (HierarchyException e) {
-                    event.getChannel().sendMessage(event.getAuthor().getAsMention() + " You are too high a role.").queue();
+                    event.getChannel().sendMessage("Cannot set nickname:\n" + event.getAuthor().getAsMention() + " You are too high a role.").queue();
                 }
                 return "Added " + event.getAuthor().getAsMention() + " to **" + role + "**";
             } else
@@ -237,6 +237,23 @@ public class ReadyListener extends ListenerAdapter {
             con.disconnect();
             return "Error";
         }
+    }
+
+    static MessageEmbed errorEmbed(String msg) {
+        EmbedBuilder eb = new EmbedBuilder();
+        eb.setTitle("Error");
+        eb.setColor(new Color(0xf44336));
+        eb.setDescription(msg);
+        return eb.build();
+    }
+
+    static MessageEmbed helpEmbed() {
+        EmbedBuilder eb = new EmbedBuilder();
+        eb.setTitle("Help");
+        eb.setColor(new Color(0x009688));
+        eb.addField("Stats", "`!stats <battletag or use nick>`", false);
+        eb.addField("Set Profile", "`!setprofile <battletag or use nick>`", false);
+        return eb.build();
     }
 
     static String upperFirst(String input) {
