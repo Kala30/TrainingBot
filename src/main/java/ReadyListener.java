@@ -146,6 +146,8 @@ public class ReadyListener extends ListenerAdapter {
         eb.setDescription(desc);
 
         String qp = "";
+        String comp ="";
+
         try {
             String time = document.selectFirst("tr[data-stat-id=\"0x0860000000000026\"]").text().split(" ")[2];
             qp += "\nTime Played: **" + time + "**";
@@ -153,8 +155,8 @@ public class ReadyListener extends ListenerAdapter {
             String gamesWon = document.selectFirst("tr[data-stat-id=\"0x08600000000003F5\"]").text().split(" ")[2];
             qp += "\nGames Won: **" + gamesWon + "**";
 
-            Element mostPlayed = document.selectFirst(".bar-container");
-            qp += "\nMost Played: **" + mostPlayed.selectFirst(".title").text() + " " + mostPlayed.selectFirst(".description").text().replace("ou", "").replace("inute", "in") + "**";
+            Element mostPlayed = document.selectFirst(".ProgressBar-container");
+            qp += "\nMost Played: **" + mostPlayed.selectFirst(".ProgressBar-title").text() + " " + mostPlayed.selectFirst(".ProgressBar-description").text().replace("ou", "").replace("inute", "in") + "**";
 
         } catch (NullPointerException e) {}
 
@@ -162,7 +164,7 @@ public class ReadyListener extends ListenerAdapter {
 
         try {
             eb.setThumbnail(player.selectFirst(".competitive-rank").selectFirst("img").attr("src"));
-            String comp = "**" + player.selectFirst(".competitive-rank").text() + " SR**";
+            comp = "**" + player.selectFirst(".competitive-rank").text() + " SR**";
 
             Element compDiv = document.selectFirst("#competitive");
 
@@ -177,11 +179,15 @@ public class ReadyListener extends ListenerAdapter {
             comp += "\nGames Won: **" + gamesWon + "**";
             comp += "\nWin Rate: **" + winRate + "**";
 
-            Element mostPlayed = compDiv.selectFirst(".bar-container");
-            comp += "\nMost Played: **" + mostPlayed.selectFirst(".title").text() + " " + mostPlayed.selectFirst(".description").text().replace("ou", "").replace("inute", "in") + "**";
+            Element mostPlayed = compDiv.selectFirst(".ProgressBar-container");
+            comp += "\nMost Played: **" + mostPlayed.selectFirst(".ProgressBar-title").text() + " " + mostPlayed.selectFirst(".ProgressBar-description").text().replace("ou", "").replace("inute", "in") + "**";
 
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+        }
+
+        if(!comp.equals(""))
             eb.addField("Competitive", comp, true);
-        } catch (NullPointerException e) {}
 
 
 
@@ -253,6 +259,7 @@ public class ReadyListener extends ListenerAdapter {
         eb.setColor(new Color(0x009688));
         eb.addField("Stats", "`!stats <battletag or use nick>`", false);
         eb.addField("Set Profile", "`!setprofile <battletag or use nick>`", false);
+        eb.setFooter("Created by Kala30", "https://avatars2.githubusercontent.com/u/13771555");
         return eb.build();
     }
 
