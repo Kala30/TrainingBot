@@ -1,3 +1,5 @@
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.dv8tion.jda.core.EmbedBuilder;
@@ -10,6 +12,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
 import javax.net.ssl.HttpsURLConnection;
+import java.net.URLConnection;
 import java.util.List;
 import java.awt.*;
 import java.io.BufferedInputStream;
@@ -141,7 +144,9 @@ public class ReadyListener extends ListenerAdapter {
 
         eb.setImage(player.selectFirst("img").attr("src"));
 
-        String desc = "Level " + player.selectFirst(".player-level").text();
+        //String desc = "Level " + player.selectFirst(".player-level").text();
+        String[] userId = document.select("script").last().html().split("\\(|,");
+        String desc = "Level " + getPlayerLevel(userId[1]);
         desc += "\nEndorsement Lvl " + player.selectFirst(".endorsement-level").text();
         eb.setDescription(desc);
 
@@ -243,6 +248,21 @@ public class ReadyListener extends ListenerAdapter {
             con.disconnect();
             return "Error";
         }
+    }
+
+    public static int getPlayerLevel(String userId) throws IOException {
+        String sURL = "https://playoverwatch.com/en-us/career/platforms/" + userId;
+
+        // Connect to the URL using java's native library
+        URL url = new URL(sURL);
+        URLConnection request = url.openConnection();
+        request.connect();
+
+        // Convert to a JSON object to print data
+        JsonParser jp = new JsonParser(); //from gson
+        JsonElement root = jp.parse(new InputStreamReader((InputStream) request.getContent())); //Convert the input stream to a json element
+        JsonArray rootobj = root.getAsJsonArray();
+        return rootobj.get(0).getAsJsonObject().get("playerLevel").getAsInt();
     }
 
     static MessageEmbed errorEmbed(String msg) {
