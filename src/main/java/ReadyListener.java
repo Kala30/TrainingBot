@@ -50,20 +50,20 @@ public class ReadyListener extends ListenerAdapter {
                     if (args.length > 1) {
                         try {
                             channel.sendTyping().queue();
-                            channel.sendMessage(getProfileScrape(args[1])).queue();
+                            channel.sendMessage(getProfile(args[1])).queue();
                         } catch (Exception e) {
                             e.printStackTrace();
-                            channel.sendMessage(errorEmbed(args[1] + " was not found")).queue();
+                            channel.sendMessage(errorEmbed(args[1] + " not found \n*" + e.toString() + "*")).queue();
                         }
                     } else {
                         String nickname = event.getGuild().getMember(event.getAuthor()).getNickname();
                         try {
                             channel.sendTyping().queue();
-                            channel.sendMessage(getProfileScrape(nickname)).queue();
+                            channel.sendMessage(getProfile(nickname)).queue();
                         } catch (Exception e) {
                             e.printStackTrace();
                             if (nickname != null)
-                                channel.sendMessage(errorEmbed(nickname + " was not found")).queue();
+                                channel.sendMessage(errorEmbed(nickname + " not found \n*" + e.toString() + "*")).queue();
                             else
                                 channel.sendMessage(errorEmbed("Please set your nickname to your Battletag")).queue();
                         }
@@ -78,10 +78,10 @@ public class ReadyListener extends ListenerAdapter {
                                 channel.sendMessage(setProfile(nickname, event)).queue();
                             } catch (Exception e) {
                                 e.printStackTrace();
-                                channel.sendMessage(errorEmbed("Player not found")).queue();
+                                channel.sendMessage(errorEmbed("Player not found \n*" + e.toString() + "*")).queue();
                             }
                         } else {
-                            channel.sendMessage(errorEmbed("Please set your nickname to your Battletag")).queue();
+                            channel.sendMessage(errorEmbed("Please set your nickname to your Battletag.")).queue();
                         }
                     } else {
                         try {
@@ -89,7 +89,7 @@ public class ReadyListener extends ListenerAdapter {
                             channel.sendMessage(setProfile(args[1], event)).queue();
                         } catch (Exception e) {
                             e.printStackTrace();
-                            channel.sendMessage(errorEmbed("Player not found")).queue();
+                            channel.sendMessage(errorEmbed("Player not found \n*" + e.toString() + "*")).queue();
                         }
                         break;
                     }
@@ -98,44 +98,9 @@ public class ReadyListener extends ListenerAdapter {
         }
     }
 
-
     public static MessageEmbed getProfile(String battletag) throws IOException {
-
-        String url = "https://ow-api.com/v1/stats/pc/us/" + battletag.replace('#', '-') + "/profile";
-        HttpsURLConnection con = (HttpsURLConnection) new URL(url).openConnection();
-        if (con.getResponseCode() == 200) {
-            InputStream responseBody = new BufferedInputStream(con.getInputStream());
-
-            JsonParser jsonParser = new JsonParser();
-            JsonObject stats = jsonParser.parse(new InputStreamReader(responseBody, "UTF-8")).getAsJsonObject();
-
-            EmbedBuilder eb = new EmbedBuilder();
-            eb.setTitle(battletag, "https://www.overbuff.com/players/pc/" + battletag.replace('#', '-'));
-            eb.setColor(new Color(0x2196F3));
-            eb.setImage(stats.get("icon").getAsString());
-            if (!stats.get("ratingIcon").getAsString().equals(""))
-                eb.setThumbnail(stats.get("ratingIcon").getAsString());
-            eb.addField("Level", Integer.toString(stats.get("prestige").getAsInt() * 100 + stats.get("level").getAsInt()), true);
-            if (!stats.get("gamesWon").getAsString().equals("0"))
-                eb.addField("Games Won", stats.get("gamesWon").getAsString(), true);
-            eb.addField("Endorsement Lvl", stats.get("endorsement").getAsString(), true);
-            if (!stats.get("rating").getAsString().equals("0"))
-                eb.addField("SR", stats.get("rating").getAsString(), true);
-
-            responseBody.close();
-            con.disconnect();
-            return eb.build();
-        } else {
-            con.disconnect();
-            EmbedBuilder eb = new EmbedBuilder();
-            eb.setDescription("ERROR");
-            return eb.build();
-        }
-    }
-
-    public static MessageEmbed getProfileScrape(String battletag) throws IOException {
         String url = "https://playoverwatch.com/career/pc/" + battletag.replace('#', '-');
-        Document document = Jsoup.connect(url).get();
+        Document document = Jsoup.connect(url).maxBodySize(0).get();
         Element player = document.selectFirst(".masthead-player");
 
         EmbedBuilder eb = new EmbedBuilder();
@@ -145,7 +110,9 @@ public class ReadyListener extends ListenerAdapter {
         eb.setImage(player.selectFirst("img").attr("src"));
 
         //String desc = "Level " + player.selectFirst(".player-level").text();
-        String[] userId = document.select("script").last().html().split("\\(|,");
+        //System.out.println(document.html().indexOf("window.app.career.init("));
+        String[] userId = document.select("script").last().html().split("[(,]");
+
         String desc = "Level " + getPlayerLevel(userId[1]);
         desc += "\nEndorsement Lvl " + player.selectFirst(".endorsement-level").text();
         eb.setDescription(desc);
@@ -199,20 +166,17 @@ public class ReadyListener extends ListenerAdapter {
         return eb.build();
     }
 
-    public static String setProfile(String battletag, MessageReceivedEvent event) throws IOException {
+    public static MessageEmbed setProfile(String battletag, MessageReceivedEvent event) throws IOException {
 
-        String url = "https://ow-api.com/v1/stats/pc/us/" + battletag.replace('#', '-') + "/profile";
-        HttpsURLConnection con = (HttpsURLConnection) new URL(url).openConnection();
-        if (con.getResponseCode() == 200) {
-            InputStream responseBody = new BufferedInputStream(con.getInputStream());
+        String url = "https://playoverwatch.com/career/pc/" + battletag.replace('#', '-');
+        Document document = Jsoup.connect(url).maxBodySize(0).get();
+        Element player = document.selectFirst(".masthead-player");
+        String msg = "";
+        try {
+            int rating = Integer.parseInt( player.selectFirst(".competitive-rank").text() );
 
-            JsonParser jsonParser = new JsonParser();
-            JsonObject stats = jsonParser.parse(new InputStreamReader(responseBody, "UTF-8")).getAsJsonObject();
-            int rating = stats.get("rating").getAsInt();
-            responseBody.close();
-            con.disconnect();
             String[] ranks = {"Grandmaster", "Master", "Diamond", "Platinum", "Gold", "Silver", "Bronze"};
-            String role = null;
+            String role;
             if (rating != 0) {
                 if (rating >= 4000)
                     role = "Grandmaster";
@@ -228,6 +192,7 @@ public class ReadyListener extends ListenerAdapter {
                     role = "Silver";
                 else
                     role = "Bronze";
+
                 Guild guild = event.getGuild();
                 List<Role> group = guild.getRolesByName(role, true);
                 ArrayList<Role> remove = new ArrayList<>();
@@ -239,19 +204,21 @@ public class ReadyListener extends ListenerAdapter {
                 try {
                     guild.getController().setNickname(guild.getMember(event.getAuthor()), battletag).queue();
                 } catch (HierarchyException e) {
-                    event.getChannel().sendMessage("Cannot set nickname:\n" + event.getAuthor().getAsMention() + " You are too high a role.").queue();
+                    msg += "Could not set **" + event.getAuthor().getName() + "**'s nickname (Your role is too high)";
                 }
-                return "Added " + event.getAuthor().getAsMention() + " to **" + role + "**";
+                msg += "\nAdded " + event.getAuthor().getAsMention() + " to **" + role + "**";
             } else
-                return event.getAuthor().getAsMention() + " You are currently unranked.";
-        } else {
-            con.disconnect();
-            return "Error";
+                msg += event.getAuthor().getAsMention() + " You are currently unranked.";
+        } catch (Exception e) {
+            return errorEmbed(e.toString());
         }
+
+        return infoEmbed("Set Profile", msg);
     }
 
     public static int getPlayerLevel(String userId) throws IOException {
         String sURL = "https://playoverwatch.com/en-us/career/platforms/" + userId;
+        //System.out.println(sURL);
 
         // Connect to the URL using java's native library
         URL url = new URL(sURL);
@@ -265,7 +232,7 @@ public class ReadyListener extends ListenerAdapter {
         return rootobj.get(0).getAsJsonObject().get("playerLevel").getAsInt();
     }
 
-    static MessageEmbed errorEmbed(String msg) {
+    private static MessageEmbed errorEmbed(String msg) {
         EmbedBuilder eb = new EmbedBuilder();
         eb.setTitle("Error");
         eb.setColor(new Color(0xf44336));
@@ -273,7 +240,7 @@ public class ReadyListener extends ListenerAdapter {
         return eb.build();
     }
 
-    static MessageEmbed helpEmbed() {
+    private static MessageEmbed helpEmbed() {
         EmbedBuilder eb = new EmbedBuilder();
         eb.setTitle("Help");
         eb.setColor(new Color(0x009688));
@@ -283,8 +250,12 @@ public class ReadyListener extends ListenerAdapter {
         return eb.build();
     }
 
-    static String upperFirst(String input) {
-        return input.substring(0, 1).toUpperCase() + input.substring(1);
+    private static MessageEmbed infoEmbed(String title, String msg) {
+        EmbedBuilder eb = new EmbedBuilder();
+        eb.setTitle(title);
+        eb.setColor(new Color(0x2196F3));
+        eb.setDescription(msg);
+        return eb.build();
     }
 
     static double round(double value, int places) {
