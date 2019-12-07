@@ -104,17 +104,19 @@ public class ReadyListener extends ListenerAdapter {
         Element player = document.selectFirst(".masthead-player");
 
         EmbedBuilder eb = new EmbedBuilder();
-        eb.setTitle(battletag, "https://www.overbuff.com/players/pc/" + battletag.replace('#', '-'));
+        eb.setTitle(battletag, "https://playoverwatch.com/career/pc/" + battletag.replace('#', '-'));
         eb.setColor(new Color(0x2196F3));
 
-        eb.setImage(player.selectFirst("img").attr("src"));
+        //eb.setImage(player.selectFirst("img").attr("src"));
+        eb.setThumbnail(player.selectFirst("img").attr("src"));
 
         //String desc = "Level " + player.selectFirst(".player-level").text();
         //System.out.println(document.html().indexOf("window.app.career.init("));
-        String[] userId = document.select("script").last().html().split("[(,]");
 
-        String desc = "Level " + getPlayerLevel(userId[1]);
-        desc += "\nEndorsement Lvl " + player.selectFirst(".endorsement-level").text();
+        //String[] userId = document.select("script").last().html().split("[(,]");
+
+        String desc = "Level " + player.selectFirst(".player-level").text();
+        desc += "\nEndorsement Level " + player.selectFirst(".EndorsementIcon-tooltip").text();
         eb.setDescription(desc);
 
         String qp = "";
@@ -128,15 +130,30 @@ public class ReadyListener extends ListenerAdapter {
             qp += "\nGames Won: **" + gamesWon + "**";
 
             Element mostPlayed = document.selectFirst(".ProgressBar-container");
-            qp += "\nMost Played: **" + mostPlayed.selectFirst(".ProgressBar-title").text() + " " + mostPlayed.selectFirst(".ProgressBar-description").text().replace("ou", "").replace("inute", "in") + "**";
+            qp += "\nMost Played: **" + mostPlayed.selectFirst(".ProgressBar-title").text() + " (" + mostPlayed.selectFirst(".ProgressBar-description").text() + ")**";
 
         } catch (NullPointerException e) {}
 
         eb.addField("Quick Play", qp, true);
 
         try {
-            eb.setThumbnail(player.selectFirst(".competitive-rank").selectFirst("img").attr("src"));
-            comp = "**" + player.selectFirst(".competitive-rank").text() + " SR**";
+
+            //eb.setThumbnail(player.selectFirst(".competitive-rank").selectFirst("img").attr("src"));
+
+            // Tank
+            try {
+                comp += "\nTank: **" + player.selectFirst("div[data-ow-tooltip-text=\"Tank Skill Rating\"]").parent().selectFirst(".competitive-rank-level").text() + " SR**";
+            } catch (NullPointerException e) {}
+            // Damage
+            try {
+                comp += "\nDamage: **" + player.selectFirst("div[data-ow-tooltip-text=\"Damage Skill Rating\"]").parent().selectFirst(".competitive-rank-level").text() + " SR**";
+            } catch (NullPointerException e) {}
+            // Support
+            try {
+                comp += "\nSupport: **" + player.selectFirst("div[data-ow-tooltip-text=\"Support Skill Rating\"]").parent().selectFirst(".competitive-rank-level").text() + " SR**";
+            } catch (NullPointerException e) {}
+
+            comp = comp.substring(1);
 
             Element compDiv = document.selectFirst("#competitive");
 
@@ -144,18 +161,19 @@ public class ReadyListener extends ListenerAdapter {
             comp += "\nTime Played: **" + time + "**";
 
             String gamesWon = compDiv.selectFirst("div[data-group-id=\"stats\"]").selectFirst("tr[data-stat-id=\"0x08600000000003F5\"]").text().split(" ")[2];
-            String gamesLost = compDiv.selectFirst("div[data-group-id=\"stats\"]").selectFirst("tr[data-stat-id=\"0x086000000000042E\"]").text().split(" ")[2];
+            String gamesPlayed = compDiv.selectFirst("div[data-group-id=\"stats\"]").selectFirst("tr[data-stat-id=\"0x0860000000000385\"]").text().split(" ")[2];
             double won = Double.parseDouble(gamesWon);
-            double lost = Double.parseDouble(gamesLost);
-            String winRate = Double.toString(round(won / (won + lost)*100, 2)) + "%";
+            double played = Double.parseDouble(gamesPlayed);
+            String winRate = Double.toString(round(won / played * 100, 2)) + "%";
             comp += "\nGames Won: **" + gamesWon + "**";
             comp += "\nWin Rate: **" + winRate + "**";
 
             Element mostPlayed = compDiv.selectFirst(".ProgressBar-container");
-            comp += "\nMost Played: **" + mostPlayed.selectFirst(".ProgressBar-title").text() + " " + mostPlayed.selectFirst(".ProgressBar-description").text().replace("ou", "").replace("inute", "in") + "**";
+            comp += "\nMost Played: **" + mostPlayed.selectFirst(".ProgressBar-title").text() + " ("
+                    + mostPlayed.selectFirst(".ProgressBar-description").text() + ")**";
 
         } catch (NullPointerException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
         }
 
         if(!comp.equals(""))
@@ -216,21 +234,6 @@ public class ReadyListener extends ListenerAdapter {
         return infoEmbed("Set Profile", msg);
     }
 
-    public static int getPlayerLevel(String userId) throws IOException {
-        String sURL = "https://playoverwatch.com/en-us/career/platforms/" + userId;
-        //System.out.println(sURL);
-
-        // Connect to the URL using java's native library
-        URL url = new URL(sURL);
-        URLConnection request = url.openConnection();
-        request.connect();
-
-        // Convert to a JSON object to print data
-        JsonParser jp = new JsonParser(); //from gson
-        JsonElement root = jp.parse(new InputStreamReader((InputStream) request.getContent())); //Convert the input stream to a json element
-        JsonArray rootobj = root.getAsJsonArray();
-        return rootobj.get(0).getAsJsonObject().get("playerLevel").getAsInt();
-    }
 
     private static MessageEmbed errorEmbed(String msg) {
         EmbedBuilder eb = new EmbedBuilder();
